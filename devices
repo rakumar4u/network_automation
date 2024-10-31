@@ -1,0 +1,2 @@
+[network_devices]
+(NYZ|SGZ|LDZ)(PST|SFC|SFS|SFV)[A-Z0-9]{3}$
