@@ -1,0 +1,40 @@
+---
+- name: VLAN and Port Configuration on Arista Devices
+  hosts: network_devices
+  gather_facts: no
+  tasks:
+    - name: Check for VLAN 666 in suspended state
+      arista_eos_command:
+        commands:
+          - "show vlan | include suspended"
+      register: vlan_check
+
+    - name: Execute Task 1 - Create VLAN 666 in suspended state if missing
+      when: "'666' not in vlan_check.stdout[0]"
+      arista_eos_config:
+        lines:
+          - "vlan 666"
+          - "state suspend"
+
+    - name: Execute Task 2 - Find ports not in connected state
+      arista_eos_command:
+        commands:
+          - "show interfaces status | exclude connected"
+      register: port_status
+
+    - name: Process each unused port for Task 3 configuration
+      when: "'666' in vlan_check.stdout[0] or '666' not in vlan_check.stdout[0]"
+      block:
+        - name: Parse the output and apply configurations
+          set_fact:
+            unused_ports: "{{ port_status.stdout[0].splitlines() | select('search', '^Et') | map('regex_replace', '\\s+', ' ') | map('split', ' ') | select(lambda x: x[3] != '666') | map(attribute=0) | list }}"
+        
+        - name: Configure each unused port for VLAN 666
+          arista_eos_config:
+            lines:
+              - "default interface {{ item }}"
+              - "interface {{ item }}"
+              - "description UNUSED-DISABLED"
+              - "switchport access vlan 666"
+              - "no shutdown"
+          loop: "{{ unused_ports }}"
