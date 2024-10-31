@@ -1,0 +1,24 @@
+---
+- name: Display VLAN and Port Status on Arista Devices
+  hosts: network_devices
+  gather_facts: no
+  tasks:
+    - name: Check for VLAN 666 in suspended state
+      arista_eos_command:
+        commands:
+          - "show vlan | include suspended"
+      register: vlan_check
+
+    - name: Display VLAN check output
+      debug:
+        var: vlan_check.stdout
+
+    - name: Find ports not in connected state
+      arista_eos_command:
+        commands:
+          - "show interfaces status | exclude connected"
+      register: port_status
+
+    - name: Display port status output
+      debug:
+        var: port_status.stdout
